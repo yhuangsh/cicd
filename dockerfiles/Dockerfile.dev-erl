@@ -1,4 +1,4 @@
 FROM erlang:21.2.1-alpine
 RUN mkdir -p /project
 WORKDIR /project
-ENTRYPOINY ["/bin/sh"]
+ENTRYPOINT ["/bin/sh"]
