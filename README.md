@@ -42,10 +42,13 @@ Since the Jenkins service is already accessible from external with our ingress. 
 - commit the dockerfile into github
 - keep the files for building dev container image in a separate project (eg: cicd)
 - set up dockerhub to link to the github project hosting the dockerfiles
-- manual create "v.." tag using github's release interface 
-- manual trigger: dockerhub
+- manually create "v.." re;ease tag using github's release interface 
+- manually trigger: dockerhub image build
   - "master" build always tagged "latest". 
   - "v.." tagged builds always tagged as "v.."
+- manual trigger (not using webhooks) for two reasons
+  - not expect to update dev container image frequently
+  - dockerhub respond to every git push event leading to unnecessary builds if some other parts of the cicd project changed (document or another image's dockerfile)
 
 ## Human: developer work flow: code, test, commit
 - decide on which "v.." tagged dev container to use
