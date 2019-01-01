@@ -1,6 +1,65 @@
-# Setup Jenkins based CI/CD Pipeline
+# Setup Jenkins based CI/CD Pipeline with Kubernetes
 
-## 
+## CICD Workflow 
+
+We build out Jenkins CI/CI pipeline with the following workflow
+
+### Human: devops workflow: setup dev container image build
+- decide on the dev container image contents, same for all developers
+- build and test image locally
+- commit the dockerfile into github
+- keep the files for building dev container image in a separate project (eg: cicd)
+- set up dockerhub to link to the github project hosting the dockerfiles
+- manually create "v.." re;ease tag using github's release interface 
+- manually trigger: dockerhub image build
+  - "master" build always tagged "latest". 
+  - "v.." tagged builds always tagged as "v.."
+- manual trigger (not using webhooks) for two reasons
+  - not expect to update dev container image frequently
+  - dockerhub respond to every git push event leading to unnecessary builds if some other parts of the cicd project changed (document or another image's dockerfile)
+
+### Human: developer work flow: code, test, commit
+- decide on which "v.." tagged dev container to use
+- run dev container locally with "-v <local_git_root>:/project" and run as root there
+- code, unit test within dev container 
+- push commits to github (tailor to your organization's review/commit/push policy) 
+
+### Jenkins: continuous DEVELOPMENT (b..) build pipeline 
+- trigger: github push event on master branch via Github web hook
+- run one of the  "v.." tagged dev container image on a pod started by and shared with Jenkins build agent 
+- git clone (git within container, so needs to be installed within thei dev container)
+- compile
+- unit test
+- tag a build number "b.." if above all went through
+
+### Human: devops workflow: trigger staging deployment
+- decide on a "b.." tag to release
+- promote the selecetd "b.." build to "staging-v.." (retag)
+
+### Jenkins: continous STAGING (staging-v..) deployment pipeline
+- trigger: github, push event on some "staging-v.." tag
+- run one of the  "v.." tagged dev container image on a pod started by and shared with Jenkins build agent 
+- git clone and checkout tag "staging-v.."
+- compile
+- unit test
+- package release
+- build a release container image and tag it as "staging-v.."
+- push the image to dockerhub
+- deploy the "staging-v.." image on the staging Kubernetes cluster
+
+### Human/Jenkins: devops/qa - integration test
+- start integration test/qa/uat/whatever with other components/dependencies
+
+### Human: devops workflow: trigger production deployment
+- decide on a "staging-v.." tag to promote to production
+- dockerhub: promote the "staging-v.." image to "prod-v.." (rebuild)
+- github: promote the selecetd "stagin-v.." build to "prod-v.." (retag)
+
+### Jenkins: continous PRODUCTION (prod-v..) deployment pipeline
+- trigger: github, push event on some "prod-v.." tag
+- promote one of the "staging-v.." builds to "prod-v.." (retag) 
+- deploy the "prod-v.." image on the production Kubernetes cluster. TODO: canary/blue green/etc release
+
 ## Install Jenkins
 
 ### Create persistent volumne and persistent volume claim for Jenkins data store
@@ -34,61 +93,6 @@ Do a diff between `ingress-tls-jenkins.yaml` and `ingress-tls.yaml`. It's really
 
 Since the Jenkins service is already accessible from external with our ingress. The only you need to do to eliminate this warning is to go to Jenkins's dashboard, Manager Jenkins, Configure System, Jenkins Location, Jenkins URL. There you fill in the root URL you use from external. Refresh the page and the warning will go away.
 
-# CICD Ideas
+## Configure Jenkins Kubernetes Plugin
 
-## Human: devops workflow: setup dev container image build
-- decide on the dev container image contents, same for all developers
-- build and test image locally
-- commit the dockerfile into github
-- keep the files for building dev container image in a separate project (eg: cicd)
-- set up dockerhub to link to the github project hosting the dockerfiles
-- manually create "v.." re;ease tag using github's release interface 
-- manually trigger: dockerhub image build
-  - "master" build always tagged "latest". 
-  - "v.." tagged builds always tagged as "v.."
-- manual trigger (not using webhooks) for two reasons
-  - not expect to update dev container image frequently
-  - dockerhub respond to every git push event leading to unnecessary builds if some other parts of the cicd project changed (document or another image's dockerfile)
-
-## Human: developer work flow: code, test, commit
-- decide on which "v.." tagged dev container to use
-- run dev container locally with "-v <local_git_root>:/project" and run as root there
-- code, unit test within dev container 
-- push commits to github (tailor your review/commit/push policy to your organization) 
-
-## Jenkins: continuous DEVELOPMENT (b..) build pipeline 
-- trigger: github push event on master branch via Github web hook
-- run on a Jenkins docker agent within one of the  "v.." tagged dev container image
-- git clone (git within container, so needs to be installed within thei dev container)
-- compile
-- unit test
-- tag a build number "b.." if above all went through
-
-## Human: devops workflow: trigger staging deployment
-- decide on a "b.." tag to release
-- promote the selecetd "b.." build to "staging-v.." (retag)
-
-## Jenkins: continous STAGING (staging-v..) deployment pipeline
-- trigger: github, push event on some "staging-v.." tag
-- run within a docker agent using one of the  "v.." tagged dev containers
-- git clone and checkout tag "staging-v.."
-- compile
-- unit test
-- package release
-- build a release container image and tag it as "staging-v.."
-- push the image to docker hub
-- deploy the "staging-v.." image on the staging Kubernetes cluster
-
-## Human/Jenkins: devops/qa - integration test
-- start integration test/qa/uat/whatever with other components/dependencies
-
-## Human: devops workflow: trigger production deployment
-- decide on a "staging-v.." tag to promote to production
-- dockerhub: promote the "staging-v.." image to "prod-v.." (rebuild)
-- github: promote the selecetd "stagin-v.." build to "prod-v.." (retag)
-
-## Jenkins: continous PRODUCTION (prod-v..) deployment pipeline
-- trigger: github, push event on some "prod-v.." tag
-- promote one of the "staging-v.." builds to "prod-v.." (retag) 
-- deploy the "prod-v.." image on the production Kubernetes cluster. TODO: canary/blue green/etc release
-
+### Create credentials from .kube/config
