@@ -1,5 +1,6 @@
 # Setup Jenkins based CI/CD Pipeline
 
+## 
 ## Install Jenkins
 
 ### Create persistent volumne and persistent volume claim for Jenkins data store
@@ -34,14 +35,55 @@ Do a diff between `ingress-tls-jenkins.yaml` and `ingress-tls.yaml`. It's really
 Since the Jenkins service is already accessible from external with our ingress. The only you need to do to eliminate this warning is to go to Jenkins's dashboard, Manager Jenkins, Configure System, Jenkins Location, Jenkins URL. There you fill in the root URL you use from external. Refresh the page and the warning will go away.
 
 
-## dev container: 
+## Human: devops workflow - dev container build
+- decide on the dev container contents, same image standard for all developers
+- build the first dev container and push to dockerhub
+- set up dockerhub autobuilds for subsequent image builds
+- keep the files needed for building dev container in a separate project (eg: cicd) preventing frequent code commits from triggering too many dev containe builds
 
-- same image standard for all developers: 
-- each developer maps his own git work copy to a standard container path /project and run as root there
-- developer test their code locally before commit/push. 
-- Jenkins also uses this container to pull code, build, test, make release, lastly create deployment image. Everything runs within this container
-- Dockerfile used to create this dev container is in the cicd project.
-- Building of this image is also automated by the same cicd process 
+## Dockerhub: dev container auto builds
+- trigger: github, cicd repo push
+- "master" build always tagged "latest". 
+- "v.." tagged builds always tagged as "v.."
 
-# release container:
-docker build -t 
+## Human: developer workflow
+- run the dev container locally with "-v <local_git_root>:/project" and run as root there
+- code, unit test within dev container 
+- push commits to github (tailor your code review/commit/push policy to your organization) 
+
+## Jenkins: continuous build pipeline - dev builds
+- trigger: github push event on master branch via Github web hook
+- run on a Jenkins docker agent within one of the  "v.." tagged dev container
+- git clone
+- compile
+- unit test
+- tag a build number "b.." if above all went through
+
+## Human: devops workflow - trigger staging deployment
+- decide on a "b.." tag to release
+- promote the selecetd "b.." build to "staging-v.." (retag)
+
+## Jenkins: continous release pipeline - staging
+- trigger: github, push event on some "staging-v.." tag
+- run within a docker agent using one of the  "v.." tagged dev containers
+- git clone and checkout tag "staging-v.."
+- compile
+- unit test
+- package release
+- build a release container image and tag it as "staging-v.."
+- push the image to docker hub
+- deploy the "staging-v.." image on the staging Kubernetes cluster
+
+## Human/Jenkins: devops/qa - integration test
+- start integration test/qa/uat/whatever with other components/dependencies
+
+## Human: devops workflow - trigger production deployment
+- decide on a "staging-v.." tag to promote to production
+- dockerhub: promote the "staging-v.." image to "prod-v.." (rebuild)
+- github: promote the selecetd "stagin-v.." build to "prod-v.." (retag)
+
+## Jenkins: continous release pipeline - production
+- trigger: github, push event on some "prod-v.." tag
+- promote one of the "staging-v.." builds to "prod-v.." (retag) 
+- deploy the "prod-v.." image on the production Kubernetes cluster. TODO: canary/blue green/etc release
+
