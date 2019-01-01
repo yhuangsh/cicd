@@ -38,15 +38,14 @@ Since the Jenkins service is already accessible from external with our ingress. 
 
 ## Human: devops workflow: setup dev container image build
 - decide on the dev container image contents, same for all developers
-- build the first dev container image and push to dockerhub
-- set up dockerhub autobuilds for subsequent image builds
-- keep the files for building dev container image in a separate project (eg: cicd) preventing frequent code commits from triggering too many dev containe builds
-- promote a container image as "v.." (retag on relevant dockerfile)
-
-## Dockerhub: dev image auto builds
-- trigger: github, cicd repo push
-- "master" build always tagged "latest". 
-- "v.." tagged builds always tagged as "v.."
+- build and test image locally
+- commit the dockerfile into github
+- keep the files for building dev container image in a separate project (eg: cicd)
+- set up dockerhub to link to the github project hosting the dockerfiles
+- manual create "v.." tag using github's release interface 
+- manual trigger: dockerhub
+  - "master" build always tagged "latest". 
+  - "v.." tagged builds always tagged as "v.."
 
 ## Human: developer work flow: code, test, commit
 - decide on which "v.." tagged dev container to use
