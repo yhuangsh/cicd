@@ -72,8 +72,9 @@ We build out Jenkins CI/CI pipeline with the following workflow
 
 1. Use `helm fetch stable/jenkins` wiht VPN to download the Jenkins charts to local.
 2. Use `helm inspect values ./jenkins-0.25.0.tgz > jenkins-values.yaml` to dump all default parameters `helm` uses to deploy Jenkins or any charts. 
-3. Open `jenkins-values.yaml` and We want to customize a few things for our Jenkins installation. 
-   - Jenkins prefix. We want to use dev.davidhuang.top/jenkins as the web root instead of dev.davidhuang.top/.
+3. Open `jenkins-values.yaml` and we want to customize a few things for our Jenkins installation. 
+   - Use our own image based on `jenkins/jenkins:lts-alpine` (image size: ~250MB) instead of `jenkins/jenkins:lts` (image size: ~ 710MB).
+   - Jenkins prefix. We want to use `https://dev.davidhuang.top/jenkins` as the web root instead of `https://dev.davidhuang.top/`.
    - Use ClusterIP as service type rather than the default LoadBalancer type since we will use `nginx-ingress` to terminate TLS for the `dev.davidhuang.top` domain and front all `http` services.
    - Use `jenkins-pvc` to make the `jenkins_home` data directory persistent
    - Admin user name and password. You may want to change these to your own.
@@ -96,3 +97,7 @@ Since the Jenkins service is already accessible from external with our ingress. 
 ## Configure Jenkins Kubernetes Plugin
 
 ### Create credentials from .kube/config
+
+https://illya-chekrygin.com/2017/08/26/configuring-certificates-for-jenkins-kubernetes-plugin-0-12/
+
+###
