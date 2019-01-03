@@ -1,5 +1,0 @@
-FROM erlang:21.2.1-alpine
-RUN apk add git
-RUN mkdir -p /project
-WORKDIR /project
-ENTRYPOINT ["/bin/sh"]
